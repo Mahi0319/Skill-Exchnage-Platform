@@ -6,7 +6,7 @@ import AddSkill from "./pages/AddSkill.jsx";
 import Search from "./pages/Search.jsx";
 import RequestTaskModal from "./pages/RequestTaskModal.jsx";
 import TaskDashboard from "./pages/TaskDashboard.jsx";
-import Registration from "./pages/Registration.jsx"; // Import registration
+import Registration from "./pages/Registration.jsx";
 
 export default function App() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
@@ -14,9 +14,12 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans">
-        <Navbar />
+        
+        {/* ✅ SHOW NAVBAR ONLY AFTER LOGIN */}
+        {currentUser && <Navbar />}
+
         <Routes>
-          {/* Root path */}
+          {/* Root */}
           <Route 
             path="/" 
             element={
@@ -24,12 +27,27 @@ export default function App() {
             } 
           />
 
-          {/* Other routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/add-skill" element={<AddSkill />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/request-task" element={<RequestTaskModal />} />
-          <Route path="/tasks" element={<TaskDashboard />} />
+          {/* Protected Routes */}
+          <Route 
+            path="/dashboard" 
+            element={currentUser ? <Dashboard /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="/add-skill" 
+            element={currentUser ? <AddSkill /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="/search" 
+            element={currentUser ? <Search /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="/request-task" 
+            element={currentUser ? <RequestTaskModal /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="/tasks" 
+            element={currentUser ? <TaskDashboard /> : <Navigate to="/" />} 
+          />
         </Routes>
       </div>
     </Router>
