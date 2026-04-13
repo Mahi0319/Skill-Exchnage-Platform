@@ -1,32 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { getTasks } from "../services/api.js";
+import { getTasks, updateTaskStatus } from "../services/api.js";
 
 export default function TaskDashboard() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
   const [tasks, setTasks] = useState([]);
 
+  const fetchTasks = async () => {
+    try {
+      const res = await getTasks(currentUser._id);
+      setTasks(res || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await getTasks(currentUser._id);
-        setTasks(res || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
     fetchTasks();
   }, []);
 
-  const assignedToMe = tasks.filter(
+  // ✅ SEPARATION LOGIC (MAIN FIX)
+  const assignedTasks = tasks.filter(
     (t) => t.assigned_to?._id === currentUser._id
   );
-  const requestedByMe = tasks.filter(
-    (t) => t.requester_id === currentUser._id
+
+  const requestedTasks = tasks.filter(
+    (t) => t.requester_id?._id === currentUser._id
   );
 
-  const renderSection = (title, list) => (
+  // ✅ STATUS UPDATE
+  const handleStatusChange = async (taskId, status) => {
+    try {
+      await updateTaskStatus(taskId, status);
+      fetchTasks(); // refresh
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const renderSection = (title, list, color, isAssigned) => (
     <section className="mb-12">
       <h2 className="text-2xl font-bold mb-4 text-white/90">{title}</h2>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {list.map((task) => (
           <div
@@ -36,11 +50,42 @@ export default function TaskDashboard() {
             <h3 className="text-xl font-semibold text-white mb-2">
               {task.title}
             </h3>
+
             <p className="text-white/80 mb-2">{task.description}</p>
 
-            <span className="px-3 py-1 rounded-full bg-blue-500/70 text-white font-bold">
+            {/* 👇 SHOW USER INFO CORRECTLY */}
+            <p className="text-white/70 text-sm mb-2">
+              {isAssigned
+                ? `Requested by: ${task.requester_id?.name}`
+                : `Assigned to: ${task.assigned_to?.name}`}
+            </p>
+
+            <span className={`px-3 py-1 rounded-full bg-${color}-500/70 text-white`}>
               {task.status.toUpperCase()}
             </span>
+
+            {/* ✅ ONLY ASSIGNED USER CAN UPDATE */}
+            {isAssigned && (
+              <div className="mt-4 flex gap-2">
+                {task.status === "pending" && (
+                  <button
+                    onClick={() => handleStatusChange(task._id, "in_progress")}
+                    className="bg-blue-500 px-3 py-1 rounded"
+                  >
+                    Start
+                  </button>
+                )}
+
+                {task.status === "in_progress" && (
+                  <button
+                    onClick={() => handleStatusChange(task._id, "completed")}
+                    className="bg-green-500 px-3 py-1 rounded"
+                  >
+                    Complete
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -49,8 +94,13 @@ export default function TaskDashboard() {
 
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500">
-      {renderSection("Tasks Assigned To You", assignedToMe)}
-      {renderSection("Tasks You Requested From Others", requestedByMe)}
+
+      {/* ✅ ASSIGNED TO ME */}
+      {renderSection("Tasks Assigned To Me", assignedTasks, "blue", true)}
+
+      {/* ✅ REQUESTED BY ME */}
+      {renderSection("Tasks I Requested", requestedTasks, "yellow", false)}
+
     </div>
   );
 }

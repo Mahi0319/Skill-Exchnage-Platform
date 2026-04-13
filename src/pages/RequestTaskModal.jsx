@@ -12,9 +12,10 @@ export default function RequestTaskModal({ selectedUser, onClose, onTaskCreated 
 
     try {
       setLoading(true);
+
       await createTask({
         requester_id: currentUser._id,
-        assigned_to: selectedUser._id,
+        assigned_to: selectedUser?._id || selectedUser, // ✅ FIXED
         title,
         description,
       });
@@ -23,8 +24,8 @@ export default function RequestTaskModal({ selectedUser, onClose, onTaskCreated 
       setTitle("");
       setDescription("");
 
-      onTaskCreated();
-      onClose();
+      onTaskCreated && onTaskCreated(); // ✅ SAFE CALL
+      onClose && onClose(); // ✅ SAFE CALL
     } catch (err) {
       console.error(err);
       alert("Failed to create task");
@@ -61,6 +62,7 @@ export default function RequestTaskModal({ selectedUser, onClose, onTaskCreated 
 
         <button
           onClick={handleSubmit}
+          disabled={loading}
           className="w-full py-3 bg-white/20 text-white font-bold rounded-2xl"
         >
           {loading ? "Submitting..." : "Submit Task"}
