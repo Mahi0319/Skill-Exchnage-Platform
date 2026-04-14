@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, getUserSkills } from "../services/api.js";
+import { getTasks, getUserSkills, updateSkill } from "../services/api.js";
 import TaskCard from "../components/TaskCard.jsx";
 import { motion } from "framer-motion";
+import { toast } from "react-toastify"; // ✅ FIX CONFIRMED
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -22,7 +23,8 @@ export default function Dashboard() {
         const res = await getUserSkills(user._id);
         setSkills(Array.isArray(res) ? res : []);
       } catch (err) {
-        console.error("Failed to fetch user skills:", err);
+        console.error(err);
+        toast.error("Failed to load skills ❌"); // ✅ SAFE ADD
       } finally {
         setLoadingSkills(false);
       }
@@ -34,7 +36,8 @@ export default function Dashboard() {
         const res = await getTasks(user._id);
         setTasks(Array.isArray(res) ? res : []);
       } catch (err) {
-        console.error("Failed to fetch tasks:", err);
+        console.error(err);
+        toast.error("Failed to load tasks ❌"); // ✅ SAFE ADD
       } finally {
         setLoadingTasks(false);
       }
@@ -46,6 +49,28 @@ export default function Dashboard() {
 
   const updateTaskStatusHandler = (taskId, status) => {
     console.log("Update Task", taskId, status);
+    toast.info("Task update triggered 🔄"); // optional UX boost
+  };
+
+  // Skill update handler
+  const updateSkillHandler = async (skillId, newProficiency) => {
+    const prevSkills = [...skills];
+
+    setSkills((prev) =>
+      prev.map((s) =>
+        s._id === skillId ? { ...s, proficiency: newProficiency } : s
+      )
+    );
+
+    try {
+      await updateSkill(skillId, newProficiency);
+      toast.success("Skill updated 🚀");
+    } catch (err) {
+      console.error(err);
+
+      setSkills(prevSkills); // rollback
+      toast.error("Failed to update skill ❌");
+    }
   };
 
   if (!currentUser) {
@@ -56,13 +81,21 @@ export default function Dashboard() {
     );
   }
 
-  // 🟢 separate task categories
-  const assignedToMe = tasks.filter(t => t.assigned_to?._id === currentUser._id);
-  const requestedByMe = tasks.filter(t => t.requester_id === currentUser._id);
+  const assignedToMe = tasks.filter(
+    (t) => t.assigned_to?._id === currentUser._id
+  );
 
-  const completedTasks = assignedToMe.filter((t) => t.status === "completed").length;
-  const pendingTasks = assignedToMe.filter((t) => t.status === "pending").length;
-  const overdueTasks = assignedToMe.filter((t) => t.status === "overdue").length;
+  const completedTasks = assignedToMe.filter(
+    (t) => t.status === "completed"
+  ).length;
+
+  const pendingTasks = assignedToMe.filter(
+    (t) => t.status === "pending"
+  ).length;
+
+  const overdueTasks = assignedToMe.filter(
+    (t) => t.status === "overdue"
+  ).length;
 
   const skillGradients = [
     "from-indigo-400 via-purple-500 to-pink-500",
@@ -76,85 +109,101 @@ export default function Dashboard() {
     skillGradients[index % skillGradients.length];
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
+    <div className="min-h-screen p-6 md:p-10 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
 
+      {/* HEADER */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-12"
+        className="mb-10"
       >
-        <h1 className="text-5xl font-extrabold mb-2 drop-shadow-lg">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-1">
           Welcome, {currentUser.name || "User"} 👋
         </h1>
-        <p className="text-gray-100">{currentUser.email}</p>
+        <p className="text-gray-200 text-sm">{currentUser.email}</p>
       </motion.div>
 
-      {/* KPI */}
-      <div className="grid gap-6 md:grid-cols-3 mb-12">
+      {/* KPI CARDS */}
+      <div className="grid gap-6 md:grid-cols-3 mb-10">
         {[
-          { title: "Completed Tasks", value: completedTasks, color: "green" },
-          { title: "Pending Tasks", value: pendingTasks, color: "yellow" },
-          { title: "Overdue Tasks", value: overdueTasks, color: "red" },
+          { title: "Completed", value: completedTasks },
+          { title: "Pending", value: pendingTasks },
+          { title: "Overdue", value: overdueTasks },
         ].map((kpi, idx) => (
           <motion.div
             key={idx}
             whileHover={{ scale: 1.05 }}
-            className={`bg-white/20 backdrop-blur-lg p-6 rounded-2xl flex flex-col items-center justify-center border-l-8 border-${kpi.color}-400 shadow-lg`}
+            className="bg-white/10 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/20"
           >
-            <p className="text-gray-100">{kpi.title}</p>
-            <p className={`text-3xl font-bold text-${kpi.color}-400 mt-2`}>
-              {kpi.value}
-            </p>
+            <p className="text-sm text-gray-200">{kpi.title}</p>
+            <h2 className="text-3xl font-bold mt-2">{kpi.value}</h2>
           </motion.div>
         ))}
       </div>
 
-      {/* Skills */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6 text-white/90">Your Skills</h2>
+      {/* SKILLS */}
+      <section className="mb-10">
+        <h2 className="text-xl font-semibold mb-5">Your Skills</h2>
 
         {loadingSkills ? (
-          <p className="text-gray-200">Loading skills...</p>
+          <p className="text-gray-200">Loading...</p>
         ) : skills.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {skills.map((skill, idx) => (
               <motion.div
                 key={skill._id || idx}
-                whileHover={{ scale: 1.05 }}
-                className={`p-6 rounded-3xl shadow-2xl bg-gradient-to-r ${getRandomGradient(
+                whileHover={{ scale: 1.04 }}
+                className={`p-5 rounded-2xl shadow-lg bg-gradient-to-r ${getRandomGradient(
                   idx
-                )} text-white`}
+                )}`}
               >
-                <h3 className="text-2xl font-bold mb-2">
-                  {skill.skill_name || "Unnamed Skill"}
+                <h3 className="text-xl font-bold">
+                  {skill.skill_name || "Skill"}
                 </h3>
-                <p className="text-white/80 font-semibold">
-                  {skill.proficiency}
-                </p>
+
+                <select
+                  value={skill.proficiency}
+                  onChange={(e) =>
+                    updateSkillHandler(skill._id, e.target.value)
+                  }
+                  className="mt-2 px-3 py-1 rounded-lg text-black text-sm font-semibold"
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
               </motion.div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-200">You haven't added any skills yet.</p>
+          <p className="text-gray-200">No skills added yet.</p>
         )}
       </section>
 
-      {/* TASKS ASSIGNED TO ME */}
+      {/* TASKS */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-white/90">Tasks Assigned To You</h2>
+        <h2 className="text-xl font-semibold mb-5">
+          Tasks Assigned To You
+        </h2>
 
         {loadingTasks ? (
-          <p className="text-gray-200">Loading tasks...</p>
+          <p className="text-gray-200">Loading...</p>
         ) : assignedToMe.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {assignedToMe.map((task) => (
-              <motion.div key={task._id} whileHover={{ scale: 1.03 }}>
-                <TaskCard task={task} onUpdateStatus={updateTaskStatusHandler} glass />
+              <motion.div key={task._id} whileHover={{ scale: 1.02 }}>
+                <TaskCard
+                  task={task}
+                  onUpdateStatus={updateTaskStatusHandler}
+                  glass
+                />
               </motion.div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-200">No tasks assigned to you yet.</p>
+          <p className="text-gray-200">
+            No tasks assigned to you yet.
+          </p>
         )}
       </section>
     </div>

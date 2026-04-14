@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getTasks, updateTaskStatus } from "../services/api.js";
+import { toast } from "react-toastify"; // ✅ ADDED
 
 export default function TaskDashboard() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
@@ -11,6 +12,7 @@ export default function TaskDashboard() {
       setTasks(res || []);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load tasks ❌"); // ✅ ADDED
     }
   };
 
@@ -18,7 +20,7 @@ export default function TaskDashboard() {
     fetchTasks();
   }, []);
 
-  // ✅ SEPARATION LOGIC (MAIN FIX)
+  // SEPARATE TASKS
   const assignedTasks = tasks.filter(
     (t) => t.assigned_to?._id === currentUser._id
   );
@@ -27,16 +29,21 @@ export default function TaskDashboard() {
     (t) => t.requester_id?._id === currentUser._id
   );
 
-  // ✅ STATUS UPDATE
+  // UPDATE STATUS
   const handleStatusChange = async (taskId, status) => {
     try {
       await updateTaskStatus(taskId, status);
-      fetchTasks(); // refresh
+
+      toast.success(`Task marked as ${status} 🚀`); // ✅ ADDED
+
+      fetchTasks(); // refresh after update
     } catch (err) {
       console.error(err);
+      toast.error("Failed to update task ❌"); // ✅ ADDED
     }
   };
 
+  // RENDER SECTION
   const renderSection = (title, list, color, isAssigned) => (
     <section className="mb-12">
       <h2 className="text-2xl font-bold mb-4 text-white/90">{title}</h2>
@@ -45,7 +52,7 @@ export default function TaskDashboard() {
         {list.map((task) => (
           <div
             key={task._id}
-            className="p-6 backdrop-blur-md bg-white/20 rounded-2xl shadow-2xl"
+            className="p-6 backdrop-blur-md bg-white/20 rounded-2xl shadow-2xl hover:shadow-3xl transition-all"
           >
             <h3 className="text-xl font-semibold text-white mb-2">
               {task.title}
@@ -53,24 +60,31 @@ export default function TaskDashboard() {
 
             <p className="text-white/80 mb-2">{task.description}</p>
 
-            {/* 👇 SHOW USER INFO CORRECTLY */}
+            {/* FIXED TEXT LOGIC */}
             <p className="text-white/70 text-sm mb-2">
               {isAssigned
-                ? `Requested by: ${task.requester_id?.name}`
-                : `Assigned to: ${task.assigned_to?.name}`}
+                ? `Requested by: ${task.requester_id?.name || "User"}`
+                : task.assigned_to?._id === currentUser._id
+                ? "Assigned to you"
+                : `Assigned to: ${task.assigned_to?.name || "User"}`}
             </p>
 
-            <span className={`px-3 py-1 rounded-full bg-${color}-500/70 text-white`}>
-              {task.status.toUpperCase()}
+            {/* STATUS */}
+            <span
+              className={`px-3 py-1 rounded-full text-white font-bold bg-${color}-500/70`}
+            >
+              {task.status?.toUpperCase()}
             </span>
 
-            {/* ✅ ONLY ASSIGNED USER CAN UPDATE */}
+            {/* ONLY ASSIGNED USER CAN UPDATE */}
             {isAssigned && (
               <div className="mt-4 flex gap-2">
                 {task.status === "pending" && (
                   <button
-                    onClick={() => handleStatusChange(task._id, "in_progress")}
-                    className="bg-blue-500 px-3 py-1 rounded"
+                    onClick={() =>
+                      handleStatusChange(task._id, "in_progress")
+                    }
+                    className="bg-blue-500 px-3 py-1 rounded text-white"
                   >
                     Start
                   </button>
@@ -78,8 +92,10 @@ export default function TaskDashboard() {
 
                 {task.status === "in_progress" && (
                   <button
-                    onClick={() => handleStatusChange(task._id, "completed")}
-                    className="bg-green-500 px-3 py-1 rounded"
+                    onClick={() =>
+                      handleStatusChange(task._id, "completed")
+                    }
+                    className="bg-green-500 px-3 py-1 rounded text-white"
                   >
                     Complete
                   </button>
@@ -95,11 +111,11 @@ export default function TaskDashboard() {
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500">
 
-      {/* ✅ ASSIGNED TO ME */}
-      {renderSection("Tasks Assigned To Me", assignedTasks, "blue", true)}
+      {/* ASSIGNED TO YOU */}
+      {renderSection("Tasks Assigned To You", assignedTasks, "blue", true)}
 
-      {/* ✅ REQUESTED BY ME */}
-      {renderSection("Tasks I Requested", requestedTasks, "yellow", false)}
+      {/* REQUESTED BY YOU */}
+      {renderSection("Tasks You Requested", requestedTasks, "yellow", false)}
 
     </div>
   );

@@ -8,6 +8,10 @@ import RequestTaskModal from "./pages/RequestTaskModal.jsx";
 import TaskDashboard from "./pages/TaskDashboard.jsx";
 import Registration from "./pages/Registration.jsx";
 
+// ✅ ADD THESE 2 IMPORTS
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export default function App() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
@@ -15,11 +19,22 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans">
         
-        {/* ✅ SHOW NAVBAR ONLY AFTER LOGIN */}
+        {/* NAVBAR */}
         {currentUser && <Navbar />}
 
+        {/* ✅ ADD TOAST CONTAINER (GLOBAL FIX) */}
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnHover
+          draggable
+          theme="dark"
+        />
+
         <Routes>
-          {/* Root */}
           <Route 
             path="/" 
             element={
@@ -27,23 +42,26 @@ export default function App() {
             } 
           />
 
-          {/* Protected Routes */}
           <Route 
             path="/dashboard" 
             element={currentUser ? <Dashboard /> : <Navigate to="/" />} 
           />
+
           <Route 
             path="/add-skill" 
             element={currentUser ? <AddSkill /> : <Navigate to="/" />} 
           />
+
           <Route 
             path="/search" 
             element={currentUser ? <Search /> : <Navigate to="/" />} 
           />
+
           <Route 
             path="/request-task" 
             element={currentUser ? <RequestTaskModal /> : <Navigate to="/" />} 
           />
+
           <Route 
             path="/tasks" 
             element={currentUser ? <TaskDashboard /> : <Navigate to="/" />} 
