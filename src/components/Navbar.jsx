@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { HiMenu, HiX } from "react-icons/hi";
+import { motion } from "framer-motion";
 
 export default function Navbar() {
   const location = useLocation();
@@ -15,44 +16,51 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-lg bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500/30 shadow-2xl border-b border-white/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-20">
-        {/* Logo */}
-        <Link
-          to="/dashboard"
-          className="text-3xl font-extrabold text-white hover:scale-105 transition-all drop-shadow-lg"
-        >
-          SkillExchange
-        </Link>
+    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-black/30 border-b border-white/20 shadow-2xl">
+      
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-20">
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center space-x-4">
-          {links.map((link) => (
-            <Link
-              key={link.name}
-              to={link.path}
-              className={`px-5 py-2 rounded-3xl text-sm font-medium transition-all drop-shadow-lg ${
-                location.pathname === link.path
-                  ? "bg-white/30 text-white backdrop-blur-lg shadow-xl"
-                  : "text-white/80 hover:bg-white/20 hover:backdrop-blur-md"
-              }`}
-            >
-              {link.name}
-            </Link>
-          ))}
+        {/* ✅ FIXED LOGO LINK */}
+        <motion.div whileHover={{ scale: 1.05 }}>
+          <Link
+            to="/dashboard"
+            className="text-3xl font-extrabold text-white tracking-wide"
+          >
+            Skill<span className="text-pink-400">Exchange</span>
+          </Link>
+        </motion.div>
 
-          {/* User Info */}
+        {/* DESKTOP NAV */}
+        <div className="hidden md:flex items-center gap-4">
+
+          {links.map((link) => {
+            const active = location.pathname === link.path;
+
+            return (
+              <Link key={link.name} to={link.path}>
+                <motion.div
+                  whileHover={{ scale: 1.08 }}
+                  className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                    active
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white hover:bg-white/20"
+                  }`}
+                >
+                  {link.name}
+                </motion.div>
+              </Link>
+            );
+          })}
+
+          {/* ✅ ONLY LOGOUT (avatar removed) */}
           {currentUser && (
-            <div className="flex items-center gap-3 ml-6">
-              <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white font-bold shadow-lg">
-                {currentUser.name[0]}
-              </div>
+            <div className="ml-6">
               <button
                 onClick={() => {
                   localStorage.removeItem("currentUser");
                   window.location.href = "/";
                 }}
-                className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 hover:from-red-600 hover:to-pink-600 transition-all"
+                className="px-5 py-2 rounded-full bg-red-500 hover:bg-red-600 text-white font-semibold transition-all shadow-md hover:scale-105"
               >
                 Logout
               </button>
@@ -60,53 +68,40 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Hamburger */}
-        <div className="md:hidden flex items-center">
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-white text-3xl focus:outline-none"
-          >
-            {mobileOpen ? <HiX /> : <HiMenu />}
+        {/* MOBILE ICON */}
+        <div className="md:hidden text-white">
+          <button onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <HiX size={28} /> : <HiMenu size={28} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* MOBILE MENU */}
       {mobileOpen && (
-        <div className="md:hidden bg-gradient-to-b from-indigo-500 via-purple-600 to-pink-500/80 backdrop-blur-lg shadow-2xl transition-all duration-300">
-          <div className="flex flex-col items-center py-6 space-y-4">
-            {links.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                onClick={() => setMobileOpen(false)}
-                className={`px-6 py-2 rounded-3xl text-white font-semibold transition-all ${
-                  location.pathname === link.path
-                    ? "bg-white/30 backdrop-blur-lg shadow-xl"
-                    : "hover:bg-white/20 hover:backdrop-blur-md"
-                }`}
-              >
+        <div className="md:hidden flex flex-col items-center py-6 gap-4 bg-black/40 backdrop-blur-xl">
+          {links.map((link) => (
+            <Link
+              key={link.name}
+              to={link.path}
+              onClick={() => setMobileOpen(false)}
+            >
+              <div className="px-6 py-2 rounded-full text-white font-semibold hover:bg-white/20 transition-all">
                 {link.name}
-              </Link>
-            ))}
-
-            {currentUser && (
-              <div className="flex flex-col items-center gap-3 mt-4">
-                <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white font-bold shadow-lg">
-                  {currentUser.name[0]}
-                </div>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("currentUser");
-                    window.location.href = "/";
-                  }}
-                  className="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 hover:from-red-600 hover:to-pink-600 transition-all"
-                >
-                  Logout
-                </button>
               </div>
-            )}
-          </div>
+            </Link>
+          ))}
+
+          {currentUser && (
+            <button
+              onClick={() => {
+                localStorage.removeItem("currentUser");
+                window.location.href = "/";
+              }}
+              className="mt-2 px-6 py-2 bg-red-500 text-white rounded-full font-semibold"
+            >
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { createUser, loginUser } from "../services/api.js";
-import { toast } from "react-toastify"; // ✅ ADDED
+import { toast } from "react-toastify";
+import { motion } from "framer-motion";
 
 export default function Registration() {
   const [name, setName] = useState("");
@@ -9,12 +9,10 @@ export default function Registration() {
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(false);
 
-  const navigate = useNavigate();
-
   // REGISTER
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      toast.error("Please fill in all fields ❌"); // ✅ replaced
+      toast.error("Please fill in all fields ❌");
       return;
     }
 
@@ -23,19 +21,22 @@ export default function Registration() {
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
 
-      toast.success("Registration successful 🚀"); // ✅ added
+      toast.success("Registration successful 🚀");
 
-      navigate("/dashboard");
+      // 🔥 FIX: FORCE PAGE RELOAD
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (err) {
       console.error(err);
-      toast.error("Registration failed ❌"); // ✅ replaced
+      toast.error("Registration failed ❌");
     }
   };
 
   // LOGIN
   const handleLogin = async () => {
     if (!email || !password) {
-      toast.error("Please fill in all fields ❌"); // ✅ replaced
+      toast.error("Please fill in all fields ❌");
       return;
     }
 
@@ -44,9 +45,12 @@ export default function Registration() {
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
 
-      toast.success("Login successful 🚀"); // ✅ added
+      toast.success("Login successful 🚀");
 
-      navigate("/dashboard");
+      // 🔥 FIX: FORCE PAGE RELOAD
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (err) {
       console.error(err);
 
@@ -63,53 +67,78 @@ export default function Registration() {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-6">
-      <div className="w-full max-w-md p-10 bg-gradient-to-tr from-white/10 via-white/5 to-white/10 backdrop-blur-xl rounded-3xl shadow-2xl animate-fadeIn">
+    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] p-6 text-white">
 
-        <h2 className="text-4xl font-extrabold text-white text-center mb-10 drop-shadow-xl animate-slideDown">
-          {isLogin ? "Login" : "Register"}
-        </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md p-8 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl relative"
+      >
+        {/* HEADER */}
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl font-extrabold">
+            {isLogin ? "Welcome Back 👋" : "Create Account 🚀"}
+          </h2>
+          <p className="text-gray-400 text-sm mt-1">
+            {isLogin
+              ? "Login to continue your journey"
+              : "Join and start exchanging skills"}
+          </p>
+        </div>
 
-        {!isLogin && (
+        {/* FORM */}
+        <div className="space-y-5">
+
+          {!isLogin && (
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            />
+          )}
+
           <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full mb-6 px-6 py-4 rounded-3xl border border-white/40 focus:outline-none focus:ring-4 focus:ring-indigo-300 shadow-lg bg-white/20 text-white placeholder-white font-semibold transition-all hover:scale-105"
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           />
-        )}
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-6 px-6 py-4 rounded-3xl border border-white/40 focus:outline-none focus:ring-4 focus:ring-indigo-300 shadow-lg bg-white/20 text-white placeholder-white font-semibold transition-all hover:scale-105"
-        />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+          />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-6 px-6 py-4 rounded-3xl border border-white/40 focus:outline-none focus:ring-4 focus:ring-indigo-300 shadow-lg bg-white/20 text-white placeholder-white font-semibold transition-all hover:scale-105"
-        />
+          {/* BUTTON */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            onClick={isLogin ? handleLogin : handleRegister}
+            className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg hover:shadow-indigo-500/30 transition-all"
+          >
+            {isLogin ? "Login" : "Create Account"}
+          </motion.button>
+        </div>
 
-        <button
-          onClick={isLogin ? handleLogin : handleRegister}
-          className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold rounded-3xl shadow-xl hover:scale-105 transform transition-all hover:shadow-2xl animate-pulse"
-        >
-          {isLogin ? "Login" : "Register"}
-        </button>
-
+        {/* SWITCH */}
         <p
           onClick={() => setIsLogin(!isLogin)}
-          className="text-white text-center mt-4 cursor-pointer underline"
+          className="text-center text-gray-400 mt-6 cursor-pointer hover:text-white transition-all"
         >
-          {isLogin ? "Switch to Register" : "Already have account? Login"}
+          {isLogin
+            ? "Don't have an account? Register"
+            : "Already have an account? Login"}
         </p>
-      </div>
+
+        {/* GLOW EFFECT */}
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/20 blur-3xl rounded-full"></div>
+      </motion.div>
     </div>
   );
 }

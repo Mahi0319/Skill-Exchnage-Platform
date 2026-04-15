@@ -9,7 +9,7 @@ const API = axios.create({
 });
 
 // ==============================
-// HELPER: NORMALIZE ERROR
+// HELPER: ERROR HANDLER
 // ==============================
 const handleError = (error, fallbackMessage) => {
   const msg = error.response?.data?.message || fallbackMessage;
@@ -21,11 +21,7 @@ const handleError = (error, fallbackMessage) => {
 // ==============================
 export const loginUser = async (email, password) => {
   try {
-    const res = await API.post("/users/login", {
-      email,
-      password,
-    });
-
+    const res = await API.post("/users/login", { email, password });
     return res.data;
   } catch (error) {
     console.error("loginUser error:", error.response?.data || error.message);
@@ -107,10 +103,7 @@ export const createTask = async ({
 // ==============================
 export const updateTaskStatus = async (taskId, status) => {
   try {
-    const res = await API.put(`/tasks/update-status/${taskId}`, {
-      status,
-    });
-
+    const res = await API.patch(`/tasks/${taskId}`, { status });
     return res.data;
   } catch (error) {
     console.error("updateTaskStatus error:", error.response?.data || error.message);
@@ -132,24 +125,37 @@ export const getUserSkills = async (userId) => {
 };
 
 // ==============================
-// 8️⃣ GET TASKS
+// 8️⃣ GET TASKS (🔥 FINAL CLEAN FIX)
 // ==============================
 export const getTasks = async (userId) => {
   try {
     const res = await API.get(`/tasks?userId=${userId}`);
 
-    const normalizedTasks = (res.data || []).map((task) => ({
-      ...task,
-      assigned_to: task.assigned_to,
-      requester_id: task.requester_id,
-      assigned_to_id: task.assigned_to?._id || task.assigned_to,
-      requester_id_id: task.requester_id?._id || task.requester_id,
-      title: task.title || "No Title",
-      description: task.description || "No Description",
-      status: task.status || "pending",
-    }));
+    const tasks = res.data || [];
 
-    return normalizedTasks;
+    return tasks.map((task) => ({
+      ...task,
+
+      // ✅ FIX title & description
+      title: task.title && task.title.trim() !== "" 
+        ? task.title 
+        : "Untitled Task",
+
+      description: task.description && task.description.trim() !== "" 
+        ? task.description 
+        : "No Description provided",
+
+      // ✅ FIX ID visibility (VERY IMPORTANT)
+      assigned_to_id:
+        typeof task.assigned_to === "object"
+          ? task.assigned_to._id
+          : task.assigned_to,
+
+      requester_id_id:
+        typeof task.requester_id === "object"
+          ? task.requester_id._id
+          : task.requester_id,
+    }));
   } catch (error) {
     console.error("getTasks error:", error.response?.data || error.message);
     throw handleError(error, "Failed to fetch tasks");
@@ -162,7 +168,6 @@ export const getTasks = async (userId) => {
 export const updateSkill = async (skillId, proficiency) => {
   try {
     const res = await API.patch(`/skills/${skillId}`, {
-      skill_id: skillId,
       proficiency,
     });
 
@@ -170,5 +175,31 @@ export const updateSkill = async (skillId, proficiency) => {
   } catch (error) {
     console.error("updateSkill error:", error);
     throw handleError(error, "Failed to update skill");
+  }
+};
+
+// ==============================
+// 🔟 DELETE SKILL
+// ==============================
+export const deleteSkill = async (skillId) => {
+  try {
+    const res = await API.delete(`/skills/${skillId}`);
+    return res.data;
+  } catch (error) {
+    console.error("deleteSkill error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// ==============================
+// 🗑️ DELETE TASK
+// ==============================
+export const deleteTask = async (taskId) => {
+  try {
+    const res = await API.delete(`/tasks/${taskId}`);
+    return res.data;
+  } catch (error) {
+    console.error("deleteTask error:", error.response?.data || error.message);
+    throw error;
   }
 };

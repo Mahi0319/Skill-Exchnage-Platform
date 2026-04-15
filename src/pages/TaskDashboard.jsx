@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, updateTaskStatus } from "../services/api.js";
-import { toast } from "react-toastify"; // ✅ ADDED
+import { getTasks, updateTaskStatus, deleteTask } from "../services/api.js";
+import { toast } from "react-toastify";
+import { motion } from "framer-motion";
 
 export default function TaskDashboard() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
   const [tasks, setTasks] = useState([]);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fetchTasks = async () => {
     try {
@@ -12,7 +14,7 @@ export default function TaskDashboard() {
       setTasks(res || []);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load tasks ❌"); // ✅ ADDED
+      toast.error("Failed to load tasks ❌");
     }
   };
 
@@ -20,103 +22,148 @@ export default function TaskDashboard() {
     fetchTasks();
   }, []);
 
-  // SEPARATE TASKS
   const assignedTasks = tasks.filter(
-    (t) => t.assigned_to?._id === currentUser._id
+    (t) => t.assigned_to_id === currentUser._id
   );
 
   const requestedTasks = tasks.filter(
-    (t) => t.requester_id?._id === currentUser._id
+    (t) => t.requester_id_id === currentUser._id
   );
 
-  // UPDATE STATUS
-  const handleStatusChange = async (taskId, status) => {
+  const getName = (user) => {
+    if (!user) return "User";
+
+    if (typeof user === "object") {
+      return user.name || "User";
+    }
+
+    if (user === currentUser._id) {
+      return currentUser.name || "You";
+    }
+
+    return "User";
+  };
+
+  const handleStatusChange = async (taskId, status, currentStatus) => {
     try {
+      if (status === currentStatus) return;
+
       await updateTaskStatus(taskId, status);
-
-      toast.success(`Task marked as ${status} 🚀`); // ✅ ADDED
-
-      fetchTasks(); // refresh after update
+      toast.success(`Task updated to ${status} 🚀`);
+      fetchTasks();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update task ❌"); // ✅ ADDED
+      toast.error("Failed to update task ❌");
     }
   };
 
-  // RENDER SECTION
-  const renderSection = (title, list, color, isAssigned) => (
-    <section className="mb-12">
-      <h2 className="text-2xl font-bold mb-4 text-white/90">{title}</h2>
+  const handleDeleteTask = async (taskId) => {
+    try {
+      setDeletingId(taskId);
+
+      await deleteTask(taskId);
+
+      toast.success("Task deleted 🗑️");
+
+      setTimeout(() => {
+        fetchTasks();
+        setDeletingId(null);
+      }, 300);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete task ❌");
+      setDeletingId(null);
+    }
+  };
+
+  const renderSection = (title, list, isAssigned) => (
+    <section className="mb-14">
+      <h2 className="text-2xl font-bold mb-6 text-white/90 tracking-wide">
+        {title}
+      </h2>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {list.map((task) => (
-          <div
+          <motion.div
             key={task._id}
-            className="p-6 backdrop-blur-md bg-white/20 rounded-2xl shadow-2xl hover:shadow-3xl transition-all"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: deletingId === task._id ? 0 : 1, y: 0 }}
+            whileHover={{ scale: 1.04 }}
+            className={`p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl transition-all duration-300 ${
+              deletingId === task._id ? "scale-95" : ""
+            }`}
           >
-            <h3 className="text-xl font-semibold text-white mb-2">
-              {task.title}
+            {/* TITLE */}
+            <h3 className="text-lg font-semibold text-white mb-1">
+              {task.title || "Untitled Task"}
             </h3>
 
-            <p className="text-white/80 mb-2">{task.description}</p>
-
-            {/* FIXED TEXT LOGIC */}
-            <p className="text-white/70 text-sm mb-2">
-              {isAssigned
-                ? `Requested by: ${task.requester_id?.name || "User"}`
-                : task.assigned_to?._id === currentUser._id
-                ? "Assigned to you"
-                : `Assigned to: ${task.assigned_to?.name || "User"}`}
+            {/* DESCRIPTION */}
+            <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+              {task.description || "No Description provided"}
             </p>
 
-            {/* STATUS */}
-            <span
-              className={`px-3 py-1 rounded-full text-white font-bold bg-${color}-500/70`}
-            >
-              {task.status?.toUpperCase()}
-            </span>
+            {/* USER INFO */}
+            <p className="text-xs text-gray-400 mb-3">
+              {isAssigned
+                ? `Requested by: ${getName(task.requester_id)}`
+                : `Assigned to: ${getName(task.assigned_to)}`}
+            </p>
 
-            {/* ONLY ASSIGNED USER CAN UPDATE */}
+            {/* STATUS BADGE */}
+            <div className="flex items-center justify-between">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  task.status === "completed"
+                    ? "bg-green-500/20 text-green-300"
+                    : task.status === "in_progress"
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-yellow-500/20 text-yellow-300"
+                }`}
+              >
+                {task.status?.replace("_", " ").toUpperCase()}
+              </span>
+            </div>
+
+            {/* ACTIONS */}
             {isAssigned && (
-              <div className="mt-4 flex gap-2">
-                {task.status === "pending" && (
-                  <button
-                    onClick={() =>
-                      handleStatusChange(task._id, "in_progress")
-                    }
-                    className="bg-blue-500 px-3 py-1 rounded text-white"
-                  >
-                    Start
-                  </button>
-                )}
+              <div className="mt-4 space-y-2">
+                <select
+                  value={task.status}
+                  onChange={(e) =>
+                    handleStatusChange(task._id, e.target.value, task.status)
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none text-sm"
+                >
+                  <option className="text-black" value="pending">
+                    Pending
+                  </option>
+                  <option className="text-black" value="in_progress">
+                    In Progress
+                  </option>
+                  <option className="text-black" value="completed">
+                    Completed
+                  </option>
+                </select>
 
-                {task.status === "in_progress" && (
-                  <button
-                    onClick={() =>
-                      handleStatusChange(task._id, "completed")
-                    }
-                    className="bg-green-500 px-3 py-1 rounded text-white"
-                  >
-                    Complete
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDeleteTask(task._id)}
+                  className="w-full py-2 text-sm font-semibold rounded-lg bg-red-500/80 hover:bg-red-600 transition-all"
+                >
+                  Delete Task
+                </button>
               </div>
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
     </section>
   );
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500">
-
-      {/* ASSIGNED TO YOU */}
-      {renderSection("Tasks Assigned To You", assignedTasks, "blue", true)}
-
-      {/* REQUESTED BY YOU */}
-      {renderSection("Tasks You Requested", requestedTasks, "yellow", false)}
-
+    <div className="min-h-screen p-6 md:p-10 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] text-white">
+      {renderSection("Tasks Assigned To You", assignedTasks, true)}
+      {renderSection("Tasks You Requested", requestedTasks, false)}
     </div>
   );
 }
